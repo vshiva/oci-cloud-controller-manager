@@ -15,6 +15,7 @@
 package client
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/flowcontrol"
 
 	"github.com/golang/glog"
 	"github.com/oracle/oci-go-sdk/common"
@@ -40,16 +42,53 @@ type Interface interface {
 	Networking() NetworkingInterface
 }
 
+// RateLimiter reader and writer.
+type RateLimiter struct {
+	Reader flowcontrol.RateLimiter
+	Writer flowcontrol.RateLimiter
+}
+
+type computeClient interface {
+	GetInstance(ctx context.Context, request core.GetInstanceRequest) (response core.GetInstanceResponse, err error)
+	ListInstances(ctx context.Context, request core.ListInstancesRequest) (response core.ListInstancesResponse, err error)
+	ListVnicAttachments(ctx context.Context, request core.ListVnicAttachmentsRequest) (response core.ListVnicAttachmentsResponse, err error)
+}
+
+type virtualNetworkClient interface {
+	GetVnic(ctx context.Context, request core.GetVnicRequest) (response core.GetVnicResponse, err error)
+	GetSubnet(ctx context.Context, request core.GetSubnetRequest) (response core.GetSubnetResponse, err error)
+	GetSecurityList(ctx context.Context, request core.GetSecurityListRequest) (response core.GetSecurityListResponse, err error)
+	UpdateSecurityList(ctx context.Context, request core.UpdateSecurityListRequest) (response core.UpdateSecurityListResponse, err error)
+}
+
+type loadBalancerClient interface {
+	GetLoadBalancer(ctx context.Context, request loadbalancer.GetLoadBalancerRequest) (response loadbalancer.GetLoadBalancerResponse, err error)
+	ListLoadBalancers(ctx context.Context, request loadbalancer.ListLoadBalancersRequest) (response loadbalancer.ListLoadBalancersResponse, err error)
+	CreateLoadBalancer(ctx context.Context, request loadbalancer.CreateLoadBalancerRequest) (response loadbalancer.CreateLoadBalancerResponse, err error)
+	DeleteLoadBalancer(ctx context.Context, request loadbalancer.DeleteLoadBalancerRequest) (response loadbalancer.DeleteLoadBalancerResponse, err error)
+	ListCertificates(ctx context.Context, request loadbalancer.ListCertificatesRequest) (response loadbalancer.ListCertificatesResponse, err error)
+	CreateCertificate(ctx context.Context, request loadbalancer.CreateCertificateRequest) (response loadbalancer.CreateCertificateResponse, err error)
+	GetWorkRequest(ctx context.Context, request loadbalancer.GetWorkRequestRequest) (response loadbalancer.GetWorkRequestResponse, err error)
+	CreateBackendSet(ctx context.Context, request loadbalancer.CreateBackendSetRequest) (response loadbalancer.CreateBackendSetResponse, err error)
+	UpdateBackendSet(ctx context.Context, request loadbalancer.UpdateBackendSetRequest) (response loadbalancer.UpdateBackendSetResponse, err error)
+	DeleteBackendSet(ctx context.Context, request loadbalancer.DeleteBackendSetRequest) (response loadbalancer.DeleteBackendSetResponse, err error)
+	CreateListener(ctx context.Context, request loadbalancer.CreateListenerRequest) (response loadbalancer.CreateListenerResponse, err error)
+	UpdateListener(ctx context.Context, request loadbalancer.UpdateListenerRequest) (response loadbalancer.UpdateListenerResponse, err error)
+	DeleteListener(ctx context.Context, request loadbalancer.DeleteListenerRequest) (response loadbalancer.DeleteListenerResponse, err error)
+}
+
 type client struct {
-	compute      *core.ComputeClient
-	network      *core.VirtualNetworkClient
-	loadbalancer *loadbalancer.LoadBalancerClient
+	compute      computeClient
+	network      virtualNetworkClient
+	loadbalancer loadBalancerClient
+
+	rateLimiter RateLimiter
 
 	subnetCache cache.Store
 }
 
 // New constructs an OCI API client.
-func New(cp common.ConfigurationProvider) (Interface, error) {
+func New(cp common.ConfigurationProvider, opRateLimiter *RateLimiter) (Interface, error) {
 	compute, err := core.NewComputeClientWithConfigurationProvider(cp)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewComputeClientWithConfigurationProvider")
@@ -84,6 +123,7 @@ func New(cp common.ConfigurationProvider) (Interface, error) {
 		compute:      &compute,
 		network:      &network,
 		loadbalancer: &lb,
+		rateLimiter:  *opRateLimiter,
 
 		subnetCache: cache.NewTTLStore(subnetCacheKeyFn, time.Duration(24)*time.Hour),
 	}
