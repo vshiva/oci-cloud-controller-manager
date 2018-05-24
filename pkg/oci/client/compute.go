@@ -97,7 +97,6 @@ func (c *client) GetPrimaryVNICForInstance(ctx context.Context, compartmentID, i
 	if compartmentID == "" {
 		glog.V(6).Infof("No compartment specified, looking up instance: %s", instanceID)
 		instance, err := c.GetInstance(ctx, instanceID)
-
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -111,7 +110,6 @@ func (c *client) GetPrimaryVNICForInstance(ctx context.Context, compartmentID, i
 			CompartmentId: &compartmentID,
 			Page:          page,
 		})
-
 		if err != nil {
 			return nil, err
 		}
