@@ -1,13 +1,18 @@
 # CHANGELOG
 
-## 0.5
+## 0.6.0
 
  * Implement `manageRoutes` to enable the cloud route controller
    - This will make sure that `VNIC`s have `SkipSourceDestCheck`
    - Also make sure that all route tables for all instances have the
        appropriate route entries for cluster cidr ranges
 
-## 0.4
+## 0.5.0
+
+* Allow load balancer functionality to be disabled. [#198]
+* Allow subnets in configuration to be optional. [#202]
+
+## 0.4.0
 
  * Implement `loadbalancer.securityListManagementMode: Frontend` which only
    manages security list rules for load balancer ingress. [#180][16]
