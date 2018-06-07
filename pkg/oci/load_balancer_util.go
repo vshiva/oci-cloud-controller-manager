@@ -418,6 +418,9 @@ func GetLoadBalancerName(service *api.Service) string {
 	}
 
 	name := fmt.Sprintf("%s%s", prefix, service.UID)
+	if val, ok := service.Annotations[ServiceAnnotationLoadBalancerName]; ok {
+		name = val
+	}
 	if len(name) > 1024 {
 		// 1024 is the max length for display name
 		// https://docs.us-phoenix-1.oraclecloud.com/api/#/en/loadbalancer/20170115/requests/UpdateLoadBalancerDetails

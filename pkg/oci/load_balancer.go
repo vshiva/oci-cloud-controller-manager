@@ -37,6 +37,11 @@ const (
 	// specifying that a load balancer should be internal.
 	ServiceAnnotationLoadBalancerInternal = "service.beta.kubernetes.io/oci-load-balancer-internal"
 
+	// ServiceAnnotationLoadBalancerName is a service annotation for
+	// specifying a pre-existing load balancer. This is used when the load balancer is pre-provisioned
+	// and customer does not want oci cloud controller manager to create it.
+	ServiceAnnotationLoadBalancerName = "service.beta.kubernetes.io/oci-load-balancer-name"
+
 	// ServiceAnnotationLoadBalancerShape is a Service annotation for
 	// specifying the Shape of a load balancer. The shape is a template that
 	// determines the load balancer's total pre-provisioned maximum capacity
